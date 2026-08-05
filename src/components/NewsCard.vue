@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
-import { NButton } from 'naive-ui'
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { NButton, NSpin } from 'naive-ui'
 import type { NewsItem } from '@/types/news'
 import { formatNewsDate, pickCoverImage, stripHtml, truncateText } from '@/utils/format'
 
@@ -10,6 +10,8 @@ const props = defineProps<{
 
 const expanded = ref(false)
 const copied = ref(false)
+const imageLoaded = ref(false)
+const imageError = ref(false)
 let copiedTimer: ReturnType<typeof setTimeout> | undefined
 
 const plainDescription = computed(() => stripHtml(props.item.description || ''))
@@ -20,6 +22,27 @@ const dateLabel = computed(() => formatNewsDate(props.item.datetime_start))
 const shownText = computed(() =>
   expanded.value || !preview.value.truncated ? plainDescription.value : preview.value.text,
 )
+
+watch(cover, () => {
+  imageLoaded.value = false
+  imageError.value = false
+})
+
+function onImageLoad(event: Event) {
+  imageLoaded.value = true
+  void event
+}
+
+function onImageError() {
+  imageError.value = true
+}
+
+function onImageRef(el: unknown) {
+  const img = el as HTMLImageElement | null
+  if (img?.complete && img.naturalWidth > 0) {
+    imageLoaded.value = true
+  }
+}
 
 async function copyDescription() {
   const text = plainDescription.value
@@ -60,13 +83,21 @@ onUnmounted(() => {
 
     <h2 class="card__title">{{ item.name }}</h2>
 
-    <img
-      v-if="cover"
-      class="card__image"
-      :src="cover"
-      :alt="item.name"
-      loading="lazy"
-    />
+    <div v-if="cover && !imageError" class="card__media">
+      <div v-if="!imageLoaded" class="card__media-placeholder" aria-hidden="true">
+        <NSpin size="small" />
+      </div>
+      <img
+        class="card__image"
+        :class="{ 'card__image--ready': imageLoaded }"
+        :src="cover"
+        :alt="item.name"
+        loading="lazy"
+        :ref="onImageRef"
+        @load="onImageLoad"
+        @error="onImageError"
+      />
+    </div>
 
     <p class="card__desc">{{ shownText }}</p>
 
@@ -128,14 +159,33 @@ onUnmounted(() => {
   font-weight: 700;
 }
 
+.card__media {
+  position: relative;
+  width: min(420px, 100%);
+  height: 240px;
+  border-radius: 10px;
+  background: var(--bg-accent);
+  overflow: hidden;
+}
+
+.card__media-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
 .card__image {
   display: block;
-  width: auto;
-  max-width: min(420px, 100%);
-  max-height: 240px;
-  height: auto;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
-  border-radius: 10px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.card__image--ready {
+  opacity: 1;
 }
 
 .card__desc {
@@ -168,9 +218,9 @@ onUnmounted(() => {
     font-size: 1.05rem;
   }
 
-  .card__image {
-    max-width: min(330px, 100%);
-    max-height: 210px;
+  .card__media {
+    width: min(330px, 100%);
+    height: 210px;
   }
 }
 </style>

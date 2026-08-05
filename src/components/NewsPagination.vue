@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue'
 import { NPagination } from 'naive-ui'
 
 defineProps<{
@@ -10,6 +11,22 @@ defineProps<{
 defineEmits<{
   'update:page': [page: number]
 }>()
+
+const pageSlot = ref(5)
+const mediaQuery = window.matchMedia('(max-width: 640px)')
+
+function syncPageSlot() {
+  pageSlot.value = mediaQuery.matches ? 1 : 5
+}
+
+onMounted(() => {
+  syncPageSlot()
+  mediaQuery.addEventListener('change', syncPageSlot)
+})
+
+onUnmounted(() => {
+  mediaQuery.removeEventListener('change', syncPageSlot)
+})
 </script>
 
 <template>
@@ -18,7 +35,7 @@ defineEmits<{
       :page="page"
       :page-count="pageCount"
       :disabled="disabled"
-      :page-slot="5"
+      :page-slot="pageSlot"
       size="large"
       @update:page="$emit('update:page', $event)"
     />
@@ -31,12 +48,12 @@ defineEmits<{
   justify-content: center;
   padding: 8px 0 4px;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .pagination :deep(.n-pagination) {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
-  row-gap: 10px;
   column-gap: 6px;
 }
 
@@ -49,6 +66,7 @@ defineEmits<{
   background: var(--surface) !important;
   color: var(--text) !important;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .pagination :deep(.n-pagination-item:hover) {
@@ -66,5 +84,17 @@ defineEmits<{
 
 .pagination :deep(.n-pagination-item--disabled) {
   opacity: 0.45;
+}
+
+@media (max-width: 640px) {
+  .pagination :deep(.n-pagination) {
+    column-gap: 4px;
+  }
+
+  .pagination :deep(.n-pagination-item),
+  .pagination :deep(.n-pagination-item--button) {
+    min-width: 40px;
+    min-height: 40px;
+  }
 }
 </style>
