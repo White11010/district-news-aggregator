@@ -1,0 +1,58 @@
+:root {
+  color-scheme: light;
+  --bg: #eef2f6;
+  --bg-accent: #e4ebf3;
+  --surface: #ffffff;
+  --text: #1a2332;
+  --text-muted: #5c6b7e;
+  --border: #d5dee8;
+  --accent: #1f4b7a;
+  --accent-soft: #d9e6f4;
+  --shadow: 0 8px 28px rgba(26, 46, 74, 0.08);
+  --radius: 14px;
+  --font: 'Manrope', system-ui, sans-serif;
+  /* WCAG 2.5.5 / Apple HIG touch target */
+  --touch-min: 44px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--font);
+  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #d7e6f7 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #dde8f0 0%, transparent 50%),
+    var(--bg);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+a {
+  color: var(--accent);
+}
+
+.touch-target {
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+}
