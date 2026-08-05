@@ -1,8 +1,9 @@
 const HTML_TAG_RE = /<[^>]*>/g
-const MULTI_SPACE_RE = /\s+/g
+const HORIZONTAL_SPACE_RE = /[^\S\n]+/g
 
 export function stripHtml(html: string): string {
   return html
+    .replace(/\r\n?/g, '\n')
     .replace(HTML_TAG_RE, ' ')
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
@@ -10,7 +11,10 @@ export function stripHtml(html: string): string {
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
-    .replace(MULTI_SPACE_RE, ' ')
+    .split('\n')
+    .map((line) => line.replace(HORIZONTAL_SPACE_RE, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
     .trim()
 }
 
