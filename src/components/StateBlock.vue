@@ -6,6 +6,7 @@ defineProps<{
   error?: string | null
   empty?: boolean
   emptyText?: string
+  loadingText?: string
 }>()
 
 defineEmits<{
@@ -17,7 +18,7 @@ defineEmits<{
   <div class="state-block">
     <div v-if="loading" class="state-block__loading">
       <NSpin size="large" />
-      <p>Загружаем новости…</p>
+      <p>{{ loadingText || 'Загружаем публикации…' }}</p>
     </div>
 
     <NAlert v-else-if="error" type="error" title="Не удалось загрузить данные" :bordered="false">
@@ -34,7 +35,7 @@ defineEmits<{
     </NAlert>
 
     <div v-else-if="empty" class="state-block__empty">
-      <p>{{ emptyText || 'Новостей за выбранный период нет' }}</p>
+      <p>{{ emptyText || 'Публикаций не найдено' }}</p>
     </div>
 
     <slot v-else />

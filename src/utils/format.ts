@@ -18,39 +18,35 @@ export function stripHtml(html: string): string {
     .trim()
 }
 
-export function truncateText(text: string, maxLength = 500): { text: string; truncated: boolean } {
+export function truncateText(text: string, maxLength = 120): { text: string; truncated: boolean } {
   if (text.length <= maxLength) {
     return { text, truncated: false }
   }
   return { text: `${text.slice(0, maxLength).trimEnd()}…`, truncated: true }
 }
 
-/** Format ISO datetime to dd-mm */
-export function formatNewsDate(iso: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-
-  const dd = String(date.getDate()).padStart(2, '0')
-  const mm = String(date.getMonth() + 1).padStart(2, '0')
-  return `${dd}-${mm}`
+/** Format YYYY-MM-DD → DD.MM.YYYY */
+export function formatDate(value: string | null | undefined): string {
+  if (!value) return '—'
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
+  if (match) return `${match[3]}.${match[2]}.${match[1]}`
+  return value
 }
 
-export function todayStartDate(): string {
-  const now = new Date()
-  const yyyy = now.getFullYear()
-  const mm = String(now.getMonth() + 1).padStart(2, '0')
-  const dd = String(now.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
+/** Format HH:MM:SS → HH:MM */
+export function formatTime(value: string | null | undefined): string {
+  if (!value) return '—'
+  const match = /^(\d{2}):(\d{2})(?::\d{2})?/.exec(value.trim())
+  if (match) return `${match[1]}:${match[2]}`
+  return value
 }
 
-const IMAGE_EXT_RE = /\.(jpe?g|png|gif|webp|bmp|avif)(\?|$)/i
+export function formatCount(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
+  return new Intl.NumberFormat('ru-RU').format(value)
+}
 
-/** Prefer real images; skip obvious non-image media URLs when possible */
-export function pickCoverImage(mediaFiles: string[] | null | undefined): string | null {
-  if (!mediaFiles?.length) return null
-
-  const image = mediaFiles.find(
-    (url) => IMAGE_EXT_RE.test(url) || url.includes('userapi.com') || url.includes('getVideoPreview'),
-  )
-  return image ?? mediaFiles[0] ?? null
+export function formatErr(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return '—'
+  return `${value.toFixed(2)}%`
 }

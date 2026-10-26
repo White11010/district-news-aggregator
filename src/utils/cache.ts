@@ -1,5 +1,5 @@
 const TTL_MS = 10 * 60 * 1000
-const STORAGE_KEY = 'district-news-cache-v2'
+const STORAGE_KEY = 'marketing-news-cache-v2'
 
 export interface CacheEntry<T> {
   fetchedAt: number
@@ -44,15 +44,6 @@ export function setCached<T>(key: string, data: T): void {
   writeStorage(memory)
 }
 
-export function districtsCacheKey(): string {
-  return 'districts'
-}
-
-export function newsCacheKey(parts: {
-  startDate: string
-  period: number
-  districtsKey: string
-  page: number
-}): string {
-  return `news:${parts.startDate}|${parts.period}|${parts.districtsKey}|${parts.page}`
+export function newsCacheKey(parts: { page: number; count: number }): string {
+  return `marketing:${parts.page}|${parts.count}`
 }

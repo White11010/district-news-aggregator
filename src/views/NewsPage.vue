@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useNewsStore } from '@/stores/news'
-import NewsFilters from '@/components/NewsFilters.vue'
-import NewsList from '@/components/NewsList.vue'
+import { PAGE_SIZE, useNewsStore } from '@/stores/news'
+import NewsTable from '@/components/NewsTable.vue'
 import NewsPagination from '@/components/NewsPagination.vue'
 import StateBlock from '@/components/StateBlock.vue'
 import ScrollTopButton from '@/components/ScrollTopButton.vue'
@@ -19,10 +18,11 @@ onMounted(() => {
 <template>
   <div class="page">
     <header class="page__header">
-      <h1 class="page__title">Новости районов Санкт-Петербурга</h1>
+      <h1 class="page__title">Маркетинговые публикации ВКонтакте</h1>
+      <p class="page__subtitle">
+        Публикации из отслеживаемых сообществ с показателями вовлечённости
+      </p>
     </header>
-
-    <NewsFilters />
 
     <div class="page__meta" v-if="!newsError">
       <span v-if="!newsLoading">Найдено: {{ totalCount }}</span>
@@ -32,10 +32,11 @@ onMounted(() => {
       :loading="newsLoading"
       :error="newsError"
       :empty="!newsLoading && !newsError && items.length === 0"
+      empty-text="Публикаций нет"
       @retry="store.retryNews()"
     >
       <div class="page__content">
-        <NewsList :items="items" />
+        <NewsTable :items="items" :page="page" :page-size="PAGE_SIZE" />
         <NewsPagination
           :page="page"
           :page-count="totalPages"
@@ -51,9 +52,11 @@ onMounted(() => {
 
 <style scoped>
 .page {
-  width: min(920px, calc(100% - 32px));
-  margin: 0 auto;
-  padding: 28px 0 72px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 28px 16px 72px;
   display: grid;
   gap: 18px;
 }
@@ -65,9 +68,16 @@ onMounted(() => {
 
 .page__title {
   margin: 0;
-  font-size: clamp(1.6rem, 4vw, 2.15rem);
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
   line-height: 1.2;
   letter-spacing: -0.02em;
+}
+
+.page__subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 
 .page__meta {
@@ -80,12 +90,12 @@ onMounted(() => {
   position: relative;
   display: grid;
   gap: 16px;
+  min-width: 0;
 }
 
 @media (max-width: 640px) {
   .page {
-    width: min(100% - 20px, 920px);
-    padding-top: 18px;
+    padding: 18px 10px 72px;
   }
 }
 </style>
