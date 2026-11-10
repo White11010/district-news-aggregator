@@ -3,6 +3,8 @@ export interface MarketingNewsItem {
   community_id: number
   community_name: string
   community_category: string
+  /** Район источника, если отдаёт backend */
+  district?: string | null
   vk_post_id: number
   yazzh_type: string[] | null
   text: string | null

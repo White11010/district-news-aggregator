@@ -18,11 +18,12 @@ const props = defineProps<{
 
 type ColumnKey =
   | 'num'
-  | 'link'
+  | 'source'
   | 'date'
   | 'time'
   | 'preview'
-  | 'service'
+  | 'category'
+  | 'district'
   | 'likes'
   | 'comments'
   | 'reposts'
@@ -39,11 +40,12 @@ interface ColumnDef {
 
 const COLUMNS: ColumnDef[] = [
   { key: 'num', label: '№', minWidth: 48, defaultWidth: 56 },
-  { key: 'link', label: 'Ссылка', minWidth: 100, defaultWidth: 160 },
+  { key: 'source', label: 'Наименование источника', minWidth: 160, defaultWidth: 260 },
   { key: 'date', label: 'Дата', minWidth: 90, defaultWidth: 110 },
   { key: 'time', label: 'Время', minWidth: 70, defaultWidth: 90 },
-  { key: 'preview', label: 'Превью текста', minWidth: 160, defaultWidth: 360 },
-  { key: 'service', label: 'Сервис', minWidth: 140, defaultWidth: 200 },
+  { key: 'preview', label: 'Превью текста', minWidth: 160, defaultWidth: 320 },
+  { key: 'category', label: 'Категории', minWidth: 120, defaultWidth: 160 },
+  { key: 'district', label: 'Район', minWidth: 110, defaultWidth: 140 },
   { key: 'likes', label: 'Лайки', minWidth: 70, defaultWidth: 90, align: 'right' },
   { key: 'comments', label: 'Комментарии', minWidth: 90, defaultWidth: 120, align: 'right' },
   { key: 'reposts', label: 'Репосты', minWidth: 80, defaultWidth: 100, align: 'right' },
@@ -51,7 +53,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'err', label: 'ERR', minWidth: 70, defaultWidth: 90, align: 'right' },
 ]
 
-const STORAGE_KEY = 'marketing-table-col-widths-v2'
+const STORAGE_KEY = 'marketing-table-col-widths-v3'
 
 function loadWidths(): Record<ColumnKey, number> {
   const defaults = Object.fromEntries(
@@ -82,18 +84,40 @@ const tableWidth = computed(() => COLUMNS.reduce((sum, col) => sum + widths[col.
 interface TableRow {
   key: string
   num: number
-  url: string | null
+  sourceName: string
+  sourceUrl: string | null
   date: string
   time: string
   preview: string
   fullText: string
-  service: string
   category: string
+  district: string
   likes: string
   comments: string
   reposts: string
   views: string
   err: string
+}
+
+/** Ссылка на сообщество VK из URL поста wall-{id}_{post} */
+function communityUrlFromPost(postUrl: string | null | undefined): string | null {
+  if (!postUrl?.trim()) return null
+  const match = /vk\.com\/wall-(\d+)/i.exec(postUrl)
+  if (match) return `https://vk.com/club${match[1]}`
+  try {
+    return new URL(postUrl).origin + new URL(postUrl).pathname
+  } catch {
+    return postUrl.trim()
+  }
+}
+
+function resolveDistrict(item: MarketingNewsItem): string {
+  const fromApi = item.district?.trim()
+  if (fromApi) return fromApi
+  if (item.community_category?.trim() === 'Районы' && item.community_name?.trim()) {
+    return item.community_name.trim()
+  }
+  return '—'
 }
 
 const rows = computed<TableRow[]>(() =>
@@ -103,13 +127,14 @@ const rows = computed<TableRow[]>(() =>
     return {
       key: item.id || `${item.community_id}-${item.vk_post_id}-${i}`,
       num: (props.page - 1) * props.pageSize + i + 1,
-      url: item.url?.trim() || null,
+      sourceName: item.community_name?.trim() || '—',
+      sourceUrl: communityUrlFromPost(item.url),
       date: formatDate(item.date),
       time: formatTime(item.time),
       preview: preview.text || '—',
       fullText: plain,
-      service: item.community_name?.trim() || '—',
-      category: item.community_category?.trim() || '',
+      category: item.community_category?.trim() || '—',
+      district: resolveDistrict(item),
       likes: formatCount(item.likes_count),
       comments: formatCount(item.comments_count),
       reposts: formatCount(item.reposts_count),
@@ -119,19 +144,33 @@ const rows = computed<TableRow[]>(() =>
   }),
 )
 
-function linkLabel(url: string): string {
-  try {
-    const path = new URL(url).pathname.replace(/^\//, '')
-    return path || 'VK'
-  } catch {
-    return 'Открыть'
-  }
-}
-
 function cellValue(row: TableRow, key: ColumnKey): string {
-  if (key === 'num') return String(row.num)
-  if (key === 'link') return row.url || ''
-  return row[key] as string
+  switch (key) {
+    case 'num':
+      return String(row.num)
+    case 'source':
+      return row.sourceName
+    case 'date':
+      return row.date
+    case 'time':
+      return row.time
+    case 'preview':
+      return row.preview
+    case 'category':
+      return row.category
+    case 'district':
+      return row.district
+    case 'likes':
+      return row.likes
+    case 'comments':
+      return row.comments
+    case 'reposts':
+      return row.reposts
+    case 'views':
+      return row.views
+    case 'err':
+      return row.err
+  }
 }
 
 const resizing = ref<{
@@ -191,10 +230,7 @@ onUnmounted(() => {
 
 <template>
   <div class="table-wrap">
-    <table
-      class="news-table"
-      :style="{ width: '100%', minWidth: `${tableWidth}px` }"
-    >
+    <table class="news-table" :style="{ width: '100%', minWidth: `${tableWidth}px` }">
       <colgroup>
         <col v-for="col in COLUMNS" :key="col.key" :style="{ width: `${widths[col.key]}px` }" />
       </colgroup>
@@ -230,26 +266,21 @@ onUnmounted(() => {
               'is-right': col.align === 'right',
               'is-muted': col.key === 'num',
               'is-preview': col.key === 'preview',
+              'is-source': col.key === 'source',
             }"
             :title="col.key === 'preview' && row.fullText ? row.fullText : undefined"
           >
-            <template v-if="col.key === 'link'">
+            <template v-if="col.key === 'source'">
               <a
-                v-if="row.url"
-                :href="row.url"
+                v-if="row.sourceUrl && row.sourceName !== '—'"
+                :href="row.sourceUrl"
                 target="_blank"
                 rel="noopener noreferrer"
-                :title="row.url"
+                :title="row.sourceName"
               >
-                {{ linkLabel(row.url) }}
+                {{ row.sourceName }}
               </a>
-              <span v-else class="muted">—</span>
-            </template>
-            <template v-else-if="col.key === 'service'">
-              <div class="service">
-                <span class="service__name">{{ row.service }}</span>
-                <span v-if="row.category" class="service__category">{{ row.category }}</span>
-              </div>
+              <span v-else>{{ row.sourceName }}</span>
             </template>
             <template v-else>
               {{ cellValue(row, col.key) }}
@@ -363,33 +394,20 @@ onUnmounted(() => {
   word-break: break-word;
 }
 
+.is-source {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
 .news-table a {
   font-weight: 600;
   text-decoration: none;
-  white-space: nowrap;
+  color: var(--accent);
 }
 
 .news-table a:hover {
   text-decoration: underline;
-}
-
-.service {
-  display: grid;
-  gap: 2px;
-}
-
-.service__name {
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.service__category {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .muted {
@@ -398,7 +416,6 @@ onUnmounted(() => {
 </style>
 
 <style>
-/* Global while dragging so cursor stays correct over all elements */
 body.col-resizing {
   cursor: col-resize !important;
   user-select: none !important;
