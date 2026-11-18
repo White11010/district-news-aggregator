@@ -44,6 +44,13 @@ export function setCached<T>(key: string, data: T): void {
   writeStorage(memory)
 }
 
-export function newsCacheKey(parts: { page: number; count: number }): string {
-  return `marketing:${parts.page}|${parts.count}`
+export function newsCacheKey(parts: {
+  page: number
+  count: number
+  sortField?: string
+  sortOrder?: string
+}): string {
+  const sortField = parts.sortField ?? 'date'
+  const sortOrder = parts.sortOrder ?? 'desc'
+  return `marketing:${parts.page}|${parts.count}|${sortField}|${sortOrder}`
 }

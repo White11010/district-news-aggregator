@@ -27,7 +27,20 @@ export interface MarketingNewsResponse {
   data: MarketingNewsItem[]
 }
 
+export type MarketingSortField =
+  | 'date'
+  | 'district'
+  | 'likes_count'
+  | 'comments_count'
+  | 'reposts_count'
+  | 'views_count'
+  | 'err'
+
+export type MarketingSortOrder = 'asc' | 'desc'
+
 export interface MarketingNewsQuery {
   page: number
   count: number
+  sort_field?: MarketingSortField
+  sort_order?: MarketingSortOrder
 }

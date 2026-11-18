@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, onUnmounted, reactive, ref } from 'vue'
-import type { MarketingNewsItem } from '@/types/news'
+import type {
+  MarketingNewsItem,
+  MarketingSortField,
+  MarketingSortOrder,
+} from '@/types/news'
 import {
   formatCount,
   formatDate,
@@ -14,6 +18,12 @@ const props = defineProps<{
   items: MarketingNewsItem[]
   page: number
   pageSize: number
+  sortField: MarketingSortField
+  sortOrder: MarketingSortOrder
+}>()
+
+const emit = defineEmits<{
+  sort: [field: MarketingSortField]
 }>()
 
 type ColumnKey =
@@ -36,22 +46,40 @@ interface ColumnDef {
   minWidth: number
   defaultWidth: number
   align?: 'left' | 'right'
+  sortField?: MarketingSortField
 }
 
 const COLUMNS: ColumnDef[] = [
   { key: 'num', label: '№', minWidth: 48, defaultWidth: 56 },
   { key: 'source', label: 'Наименование источника', minWidth: 160, defaultWidth: 260 },
-  { key: 'date', label: 'Дата', minWidth: 90, defaultWidth: 110 },
+  { key: 'date', label: 'Дата', minWidth: 90, defaultWidth: 110, sortField: 'date' },
   { key: 'time', label: 'Время', minWidth: 70, defaultWidth: 90 },
   { key: 'preview', label: 'Превью текста', minWidth: 160, defaultWidth: 320 },
   { key: 'category', label: 'Категории', minWidth: 120, defaultWidth: 160 },
-  { key: 'district', label: 'Район', minWidth: 110, defaultWidth: 140 },
-  { key: 'likes', label: 'Лайки', minWidth: 70, defaultWidth: 90, align: 'right' },
-  { key: 'comments', label: 'Комментарии', minWidth: 90, defaultWidth: 120, align: 'right' },
-  { key: 'reposts', label: 'Репосты', minWidth: 80, defaultWidth: 100, align: 'right' },
-  { key: 'views', label: 'Просмотры', minWidth: 90, defaultWidth: 110, align: 'right' },
-  { key: 'err', label: 'ERR', minWidth: 70, defaultWidth: 90, align: 'right' },
+  { key: 'district', label: 'Район', minWidth: 110, defaultWidth: 140, sortField: 'district' },
+  { key: 'likes', label: 'Лайки', minWidth: 70, defaultWidth: 90, align: 'right', sortField: 'likes_count' },
+  { key: 'comments', label: 'Комментарии', minWidth: 90, defaultWidth: 120, align: 'right', sortField: 'comments_count' },
+  { key: 'reposts', label: 'Репосты', minWidth: 80, defaultWidth: 100, align: 'right', sortField: 'reposts_count' },
+  { key: 'views', label: 'Просмотры', minWidth: 90, defaultWidth: 110, align: 'right', sortField: 'views_count' },
+  { key: 'err', label: 'ERR', minWidth: 70, defaultWidth: 90, align: 'right', sortField: 'err' },
 ]
+
+function isSorted(col: ColumnDef): boolean {
+  return !!col.sortField && props.sortField === col.sortField
+}
+
+function sortAriaSort(col: ColumnDef): 'ascending' | 'descending' | 'none' | undefined {
+  if (!col.sortField) return undefined
+  if (!isSorted(col)) return 'none'
+  return props.sortOrder === 'asc' ? 'ascending' : 'descending'
+}
+
+function sortAriaLabel(col: ColumnDef): string {
+  if (!col.sortField) return col.label
+  if (!isSorted(col)) return `Сортировать по «${col.label}»`
+  const next = props.sortOrder === 'desc' ? 'по возрастанию' : 'по убыванию'
+  return `«${col.label}»: сейчас ${props.sortOrder === 'asc' ? 'по возрастанию' : 'по убыванию'}. Нажмите, чтобы сортировать ${next}`
+}
 
 const STORAGE_KEY = 'marketing-table-col-widths-v3'
 
@@ -179,12 +207,19 @@ const resizing = ref<{
   startWidth: number
   minWidth: number
 } | null>(null)
+const suppressSortClick = ref(false)
+
+function onSortClick(col: ColumnDef) {
+  if (!col.sortField || resizing.value || suppressSortClick.value) return
+  emit('sort', col.sortField)
+}
 
 function onResizeStart(event: PointerEvent, col: ColumnDef) {
   event.preventDefault()
   event.stopPropagation()
   const handle = event.currentTarget as HTMLElement
   handle.setPointerCapture(event.pointerId)
+  suppressSortClick.value = true
   resizing.value = {
     key: col.key,
     startX: event.clientX,
@@ -216,6 +251,10 @@ function onResizeEnd() {
   resizing.value = null
   document.body.classList.remove('col-resizing')
   persistWidths()
+  // Ignore the click that follows pointerup on the resize handle
+  requestAnimationFrame(() => {
+    suppressSortClick.value = false
+  })
 }
 
 function resetWidth(col: ColumnDef) {
@@ -239,15 +278,53 @@ onUnmounted(() => {
           <th
             v-for="col in COLUMNS"
             :key="col.key"
-            :class="{ 'is-right': col.align === 'right' }"
+            :class="{
+              'is-right': col.align === 'right',
+              'is-sortable': !!col.sortField,
+              'is-sorted': col.sortField === sortField,
+            }"
             :style="{ width: `${widths[col.key]}px` }"
+            :aria-sort="sortAriaSort(col)"
+            @click="onSortClick(col)"
           >
-            <span class="th-label">{{ col.label }}</span>
+            <button
+              v-if="col.sortField"
+              type="button"
+              class="th-sort"
+              :aria-label="sortAriaLabel(col)"
+              @click.stop="onSortClick(col)"
+            >
+              <span class="th-label">{{ col.label }}</span>
+              <span
+                class="sort-icon"
+                :class="{
+                  'is-active': isSorted(col),
+                  'is-asc': isSorted(col) && sortOrder === 'asc',
+                  'is-desc': isSorted(col) && sortOrder === 'desc',
+                }"
+                aria-hidden="true"
+              >
+                <svg class="sort-icon__svg" viewBox="0 0 12 16" width="12" height="16" fill="none">
+                  <path
+                    class="sort-icon__up"
+                    d="M6 2.5 2.5 7h7L6 2.5Z"
+                    fill="currentColor"
+                  />
+                  <path
+                    class="sort-icon__down"
+                    d="M6 13.5 9.5 9h-7L6 13.5Z"
+                    fill="currentColor"
+                  />
+                </svg>
+              </span>
+            </button>
+            <span v-else class="th-label">{{ col.label }}</span>
             <span
               class="resize-handle"
               role="separator"
               aria-orientation="vertical"
               :aria-label="`Изменить ширину столбца «${col.label}»`"
+              @click.stop
               @pointerdown="onResizeStart($event, col)"
               @pointermove="onResizeMove"
               @pointerup="onResizeEnd"
@@ -333,12 +410,80 @@ onUnmounted(() => {
   user-select: none;
 }
 
+.is-sortable {
+  cursor: pointer;
+}
+
+.is-sortable:hover .th-sort,
+.is-sorted .th-sort {
+  color: var(--text);
+}
+
+.is-sortable:hover .sort-icon:not(.is-active) {
+  opacity: 0.72;
+}
+
+.th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+.is-right .th-sort {
+  flex-direction: row-reverse;
+  margin-left: auto;
+}
+
 .th-label {
   display: block;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding-right: 6px;
+}
+
+.sort-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  opacity: 0.38;
+  color: var(--text-muted);
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.sort-icon.is-active {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.sort-icon__svg {
+  display: block;
+}
+
+.sort-icon__up,
+.sort-icon__down {
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.sort-icon.is-asc .sort-icon__up,
+.sort-icon.is-desc .sort-icon__down {
+  opacity: 1;
+}
+
+.sort-icon.is-asc .sort-icon__down,
+.sort-icon.is-desc .sort-icon__up {
+  opacity: 0.28;
 }
 
 .resize-handle {

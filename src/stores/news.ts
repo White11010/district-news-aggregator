@@ -1,10 +1,16 @@
 import { computed, nextTick, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { getMarketingNews } from '@/api/news'
-import type { MarketingNewsItem } from '@/types/news'
+import type {
+  MarketingNewsItem,
+  MarketingSortField,
+  MarketingSortOrder,
+} from '@/types/news'
 import { getCached, newsCacheKey, setCached } from '@/utils/cache'
 
 export const PAGE_SIZE = 25
+export const DEFAULT_SORT_FIELD: MarketingSortField = 'date'
+export const DEFAULT_SORT_ORDER: MarketingSortOrder = 'desc'
 
 async function scrollToTop() {
   await nextTick()
@@ -14,6 +20,8 @@ async function scrollToTop() {
 
 export const useNewsStore = defineStore('news', () => {
   const page = ref(1)
+  const sortField = ref<MarketingSortField>(DEFAULT_SORT_FIELD)
+  const sortOrder = ref<MarketingSortOrder>(DEFAULT_SORT_ORDER)
 
   const items = ref<MarketingNewsItem[]>([])
   const totalCount = ref(0)
@@ -33,6 +41,8 @@ export const useNewsStore = defineStore('news', () => {
       const cacheKey = newsCacheKey({
         page: page.value,
         count: PAGE_SIZE,
+        sortField: sortField.value,
+        sortOrder: sortOrder.value,
       })
 
       if (!force) {
@@ -47,6 +57,8 @@ export const useNewsStore = defineStore('news', () => {
       const response = await getMarketingNews({
         page: page.value,
         count: PAGE_SIZE,
+        sort_field: sortField.value,
+        sort_order: sortOrder.value,
       })
 
       items.value = response.data ?? []
@@ -68,6 +80,17 @@ export const useNewsStore = defineStore('news', () => {
     void loadNews().then(() => scrollToTop())
   }
 
+  function setSort(field: MarketingSortField) {
+    if (sortField.value === field) {
+      sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
+    } else {
+      sortField.value = field
+      sortOrder.value = DEFAULT_SORT_ORDER
+    }
+    page.value = 1
+    void loadNews().then(() => scrollToTop())
+  }
+
   async function init() {
     await loadNews()
   }
@@ -78,6 +101,8 @@ export const useNewsStore = defineStore('news', () => {
 
   return {
     page,
+    sortField,
+    sortOrder,
     items,
     totalCount,
     newsLoading,
@@ -86,6 +111,7 @@ export const useNewsStore = defineStore('news', () => {
     init,
     loadNews,
     setPage,
+    setSort,
     retryNews,
   }
 })

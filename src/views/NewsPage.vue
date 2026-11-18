@@ -8,7 +8,8 @@ import StateBlock from '@/components/StateBlock.vue'
 import ScrollTopButton from '@/components/ScrollTopButton.vue'
 
 const store = useNewsStore()
-const { items, newsLoading, newsError, page, totalPages, totalCount } = storeToRefs(store)
+const { items, newsLoading, newsError, page, totalPages, totalCount, sortField, sortOrder } =
+  storeToRefs(store)
 
 onMounted(() => {
   void store.init()
@@ -36,7 +37,14 @@ onMounted(() => {
       @retry="store.retryNews()"
     >
       <div class="page__content">
-        <NewsTable :items="items" :page="page" :page-size="PAGE_SIZE" />
+        <NewsTable
+          :items="items"
+          :page="page"
+          :page-size="PAGE_SIZE"
+          :sort-field="sortField"
+          :sort-order="sortOrder"
+          @sort="store.setSort($event)"
+        />
         <NewsPagination
           :page="page"
           :page-count="totalPages"
