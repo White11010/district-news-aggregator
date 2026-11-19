@@ -127,18 +127,6 @@ interface TableRow {
   err: string
 }
 
-/** Ссылка на сообщество VK из URL поста wall-{id}_{post} */
-function communityUrlFromPost(postUrl: string | null | undefined): string | null {
-  if (!postUrl?.trim()) return null
-  const match = /vk\.com\/wall-(\d+)/i.exec(postUrl)
-  if (match) return `https://vk.com/club${match[1]}`
-  try {
-    return new URL(postUrl).origin + new URL(postUrl).pathname
-  } catch {
-    return postUrl.trim()
-  }
-}
-
 function resolveDistrict(item: MarketingNewsItem): string {
   const fromApi = item.district?.trim()
   if (fromApi) return fromApi
@@ -156,7 +144,7 @@ const rows = computed<TableRow[]>(() =>
       key: item.id || `${item.community_id}-${item.vk_post_id}-${i}`,
       num: (props.page - 1) * props.pageSize + i + 1,
       sourceName: item.community_name?.trim() || '—',
-      sourceUrl: communityUrlFromPost(item.url),
+      sourceUrl: item.url?.trim() || null,
       date: formatDate(item.date),
       time: formatTime(item.time),
       preview: preview.text || '—',
