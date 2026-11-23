@@ -55,7 +55,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'date', label: 'Дата', minWidth: 90, defaultWidth: 110, sortField: 'date' },
   { key: 'time', label: 'Время', minWidth: 70, defaultWidth: 90 },
   { key: 'preview', label: 'Превью текста', minWidth: 160, defaultWidth: 320 },
-  { key: 'category', label: 'Категории', minWidth: 120, defaultWidth: 160 },
+  { key: 'category', label: 'Категории', minWidth: 120, defaultWidth: 160, sortField: 'category' },
   { key: 'district', label: 'Район', minWidth: 110, defaultWidth: 140, sortField: 'district' },
   { key: 'likes', label: 'Лайки', minWidth: 70, defaultWidth: 90, align: 'right', sortField: 'likes_count' },
   { key: 'comments', label: 'Комментарии', minWidth: 90, defaultWidth: 120, align: 'right', sortField: 'comments_count' },

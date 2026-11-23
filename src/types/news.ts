@@ -29,6 +29,7 @@ export interface MarketingNewsResponse {
 
 export type MarketingSortField =
   | 'date'
+  | 'category'
   | 'district'
   | 'likes_count'
   | 'comments_count'
